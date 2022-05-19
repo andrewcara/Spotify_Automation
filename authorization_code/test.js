@@ -6,10 +6,15 @@
  * For more information, read
  * https://developer.spotify.com/web-api/authorization-guide/#authorization_code_flow
  */
-var fs = require("fs");
-var text = fs.readFileSync("./track_ids.txt").toString('utf-8');
-const arr = text.split(/\r?\n/);
-new_arr = arr.map(i => 'spotify:track:' + i);
+ 
+
+ // this formats the data from the text file sent from the mac so that it is correctly formatted for the spotify api
+ var fs = require("fs");
+ var text = fs.readFileSync("./track_ids.txt").toString('utf-8');
+ const arr = text.split(/\r?\n/);
+
+ // mapping funciton to append spotify:track: to each track id
+ new_arr = arr.map(i => 'spotify:track:' + i);
 
  var express = require('express'); // Express web server framework
  var request = require('request'); // "Request" library
@@ -17,9 +22,13 @@ new_arr = arr.map(i => 'spotify:track:' + i);
  var querystring = require('querystring');
  var cookieParser = require('cookie-parser');
  
- var playlist_id = '3mTJurZZtjAQg6iwZ7kPxk'
- var client_id = 'daf925983160411786bc9afd3c8db891'; // Your client id
- var client_secret = '2be54995915c4bd197d6d85650faf39d'; // Your secret
+ var playlist_id = '58viRtMFtNMnP7Yt9bCJkL' // playlist id
+ client_id = process.env.SPOTIPY_CLIENT_ID
+ client_secret = process.env.SPOTIPY_CLIENT_SECRET
+ client_id = client_id.replace(/\s/g, '');
+ client_secret = client_secret.replace(/\s/g, '');
+
+
  var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
  /**
   * Generates a random string containing numbers and letters
@@ -50,7 +59,7 @@ new_arr = arr.map(i => 'spotify:track:' + i);
    res.cookie(stateKey, state);
  
    // your application requests authorization
-   var scope = 'user-read-private user-read-email playlist-modify-public';
+   var scope = 'user-read-private user-read-email playlist-modify-public'; //need to specify playlist-modify
    res.redirect('https://accounts.spotify.com/authorize?' +
      querystring.stringify({
        response_type: 'code',
@@ -143,26 +152,26 @@ new_arr = arr.map(i => 'spotify:track:' + i);
        var access_token = body.access_token;
        res.send({
          'access_token': access_token
+
        });
+        app.set('access_token', access_token);
      }
    });
  });
 
- app.get('/add_playlist', function(req, res){
-   res.send('access_token=' + req.app.get('access_token'));
+ app.get('/add_playlist', function(req, res){ // adding songs to spotify playlist
+   res.send('access_token=' + req.app.get('access_token')); //using access_token we received during login
    var access_token = req.app.get('access_token');
 
   var request = require('request');
       var authOptions1 = {
           url: `https://api.spotify.com/v1/playlists/${playlist_id}/tracks`,
           body: JSON.stringify({
-            "uris": [
-              "spotify:track:4iV5W9uYEdYUVa79Axb7Rh"
-            ]
+            "uris": new_arr
           }),
           dataType:'json',
           headers: {
-              'Authorization': 'Bearer ' + access_token,
+              'Authorization': 'Bearer ' + access_token, //cannot make any requests to the spotify api without access_token
               'Content-Type': 'application/json',
           }
       };
